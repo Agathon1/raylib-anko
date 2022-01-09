@@ -1,0 +1,14 @@
+print("Hello World :)")
+
+InitWindow(640, 480, "test", 60)
+//setFPS(10)
+for !WindowShouldClose() {
+	BeginDrawing()
+	ClearBackground(BLACK)
+	EndDrawing()
+
+
+	SetWindowPosition(GetMousePosition().X / 10, GetMousePosition().Y)
+
+	print(GetMousePosition())
+}

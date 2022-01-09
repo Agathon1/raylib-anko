@@ -1,0 +1,4 @@
+github.com/gen2brain/raylib-go/raylib v0.0.0-20220104185917-feee92d04602 h1:hAXgWhMrjsWzwHnl5MRFPvbV9GQbvWq0U2M6IUeZHco=
+github.com/gen2brain/raylib-go/raylib v0.0.0-20220104185917-feee92d04602/go.mod h1:+NbsqGlEQqGqrsgJFF5Yj2dkvn0ML2SQb8RqM2hJsPU=
+github.com/mattn/anko v0.1.8 h1:wDGM0Rwgbzhk1h8xE6qAR4n+PO/9clzf3tLGtrwsqJg=
+github.com/mattn/anko v0.1.8/go.mod h1:C5D2zw4NIv/sB2SrQ3qs5wqPw0wKiA2GZqexy4ctNH0=
