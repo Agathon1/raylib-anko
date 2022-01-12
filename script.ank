@@ -1,14 +1,40 @@
 print("Hello World :)")
+InitWindow(640, 480, "test", 50)
 
-InitWindow(640, 480, "test", 60)
-//setFPS(10)
+mx = GetMouseX()
+my = GetMouseY()
+
+
+pb = NewRectangle(640 / 2 - 60, 40, 120, 80)
+pbc = RED
+
+shouldShow = false
+
+
+mc = NewRectangle(mx - 1, my - 1, 2, 2)
+
+t = 0.0
 for !WindowShouldClose() {
+	t += 0.01
 	BeginDrawing()
 	ClearBackground(BLACK)
 	EndDrawing()
 
+	mx = GetMouseX()
+	my = GetMouseY()
+	mc = NewRectangle(mx - 1, my - 1, 2, 2)
 
-	SetWindowPosition(GetMousePosition().X / 10, GetMousePosition().Y)
+	DrawRectangleRec(pb, pbc)
 
-	print(GetMousePosition())
+	if CheckCollisionRecs(mc, pb) {
+		if IsMouseButtonDown(0) {
+			shouldShow = true
+		} else {
+			shouldShow = false
+		}
+	}
+	
+	if shouldShow {
+		DrawText("WORKS!", 10, 10, 20, YELLOW)
+	}
 }
