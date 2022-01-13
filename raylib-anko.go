@@ -6,10 +6,15 @@ import (
 	"fmt"
 	"github.com/mattn/anko/vm"
 	"github.com/mattn/anko/env"
-	"reflect"
+	_ "reflect"
 	"math"
 	"net/http"
+	"github.com/PuerkitoBio/goquery"
+	"net/url"
+	"math/rand"
+	"time"
 	"io"
+	"strings"
 )
 
 func ChoiceInitWindow(width int32, height int32, title string, args ...int32) {
@@ -34,9 +39,64 @@ func webget(url string) (string) {
 	return string(body)
 }
 
+type SearchResult struct {
+	Text string
+	Url string
+}
+
+func websearch(searchParameter string) ([]SearchResult) {
+	_ = url.QueryEscape("a")
+	res, err := http.Get("https://lite.duckduckgo.com/lite/?q=" + url.QueryEscape(searchParameter)) //url.QueryEscape(searchParameter))
+	//res, err := http.Get("http://0.0.0.0:8000/testWebSearch.html") -- Used to not spam DDG and get rate-limited
+	if err != nil { fmt.Println("ERR - Could not GET DDG"); os.Exit(0)}
+	defer res.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	_ = err
+
+	var finalResults []SearchResult
+
+	doc.Find("table tr td a").Each(func(i int, s *goquery.Selection) {
+		if !strings.Contains(s.Parent().Text(), "Zero-click info:") || !strings.Contains(s.Text(), "More at Wikipedia") {
+			var wr SearchResult
+			wr.Text = s.Text()
+			wr.Url, _ = s.Attr("href")
+			finalResults = append(finalResults, wr)
+		}
+	})
+	return finalResults
+}
+
+func errFunc(e string) {
+	fmt.Println("┌" + "┤ERROR├" + strings.Repeat("─", (len(e) - 5)) + "┐")
+	fmt.Println("│ " + e + " │")
+	fmt.Println("└" + strings.Repeat("─", (len(e) + 2)) + "┘")
+	os.Exit(0)
+}
+
+func randFunc(max int) (int) {
+	rand.Seed(time.Now().Unix())
+    return rand.Intn(max)
+}
+
+func evalFunc(content string) (interface{}) {
+	evalEnv := env.NewEnv()
+
+	_ = evalEnv.Define("print", fmt.Println)
+	_ = evalEnv.Define("split", strings.Split)
+	//_ = evalEnv.Define("eval", evalFunc)
+	_ = evalEnv.Define("quit", func() {os.Exit(0)})
+
+	evalResult, err := vm.Execute(evalEnv, nil, content)
+	if err != nil { fmt.Println(err); os.Exit(0) }
+	return evalResult
+}
+
 func main() {
 	script_path := ""
+
 	if len(os.Args) >= 2 { script_path = os.Args[1] } else { fmt.Println("ERR - No script!") ; os.Exit(0) }
+
 	script, err := os.ReadFile(script_path)
 	if err != nil { fmt.Println("ERR - Script at '" + script_path + "' not found!") ; os.Exit(0)}
 
@@ -68,13 +128,20 @@ func main() {
 		"MAGENTA": rl.Magenta,
 		"RAYWHITE": rl.RayWhite,
 	}
-	
+
+	keys := map[string]int32 {
+		"KEY_UP": 265,
+		"KEY_DOWN": 264,
+		"KEY_LEFT": 263,
+		"KEY_RIGHT": 262,
+		"KEY_TEST": 65,
+	}
+
 	e := env.NewEnv()
-	
+
 	
 	// Non-Raylib functions
 	_ = e.Define("print", fmt.Println)
-	_ = e.Define("type", reflect.TypeOf)
 
 	_ = e.Define("cos", math.Cos)
 	_ = e.Define("acos", math.Acos)
@@ -87,9 +154,16 @@ func main() {
 	_ = e.Define("min", math.Min)
 
 	_ = e.Define("webget", webget)
+	_ = e.Define("websearch", websearch) // Using Duck Duck Go
 
 	_ = e.Define("quit", func() {os.Exit(0)})
+	_ = e.Define("err", errFunc)
 	
+	_ = e.Define("rand", randFunc)
+
+	_ = e.Define("split", strings.Split)
+
+	_ = e.Define("eval", evalFunc)
 	
 	
 	//### <- This means that it is not yet implemented in go-raylib
@@ -149,7 +223,7 @@ func main() {
 	_ = e.Define("IsCursorOnScreen", rl.IsCursorOnScreen)
 
 
-    	// Drawing-related functions
+    // Drawing-related functions
 
 	_ = e.Define("ClearBackground", rl.ClearBackground)
 	_ = e.Define("BeginDrawing", rl.BeginDrawing)
@@ -170,7 +244,7 @@ func main() {
 	//###_ = e.Define("EndVrStereoMode", rl.EndVrStereoMode)
 
 
-   	 // VR stereo config functions for VR simulator
+    // VR stereo config functions for VR simulator
 
 	//###_ = e.Define("LoadVrStereoConfig", rl.LoadVrStereoConfig)
 	//###_ = e.Define("UnloadVrStereoConfig", rl.UnloadVrStereoConfig)
@@ -188,7 +262,7 @@ func main() {
 	_ = e.Define("SetShaderValueTexture", rl.SetShaderValueTexture)
 
 
-   	 // Screen-space-related functions
+    // Screen-space-related functions
 
 	_ = e.Define("GetMouseRay", rl.GetMouseRay)
 	_ = e.Define("GetCameraMatrix", rl.GetCameraMatrix)
@@ -207,7 +281,7 @@ func main() {
 	_ = e.Define("GetTime", rl.GetTime)
 
 
-    	// Misc. functions
+    // Misc. functions
 
 	_ = e.Define("GetRandomValue", rl.GetRandomValue)
 	_ = e.Define("SetRandomSeed", rl.SetRandomSeed)
@@ -299,7 +373,7 @@ func main() {
 	//###_ = e.Define("SetGamepadMappings", rl.SetGamepadMappings)
 
 	
-    	// Input-related functions: mouse
+    // Input-related functions: mouse
 
 	_ = e.Define("IsMouseButtonPressed", rl.IsMouseButtonPressed)
 	_ = e.Define("IsMouseButtonDown", rl.IsMouseButtonDown)
@@ -316,7 +390,7 @@ func main() {
 	_ = e.Define("SetMouseCursor", rl.SetMouseCursor)
 
 	
-    	// Input-related functions: touch
+    // Input-related functions: touch
 	
 	_ = e.Define("GetTouchX", rl.GetTouchX)
 	_ = e.Define("GetTouchY", rl.GetTouchY)
@@ -337,7 +411,7 @@ func main() {
 	_ = e.Define("GetGesturePinchAngle", rl.GetGesturePinchAngle)
 
 	
-    	// Camera System Functions (Module: rcamera)
+    // Camera System Functions (Module: rcamera)
 
 	_ = e.Define("SetCameraMode", rl.SetCameraMode)
 	_ = e.Define("SetCameraMode", rl.SetCameraMode)
@@ -396,7 +470,7 @@ func main() {
 	_ = e.Define("DrawPolyLinesEx", rl.DrawPolyLinesEx)
 
 
-    	// Basic shapes collision detection functions
+    // Basic shapes collision detection functions
 
 	_ = e.Define("CheckCollisionRecs", rl.CheckCollisionRecs)
 	_ = e.Define("CheckCollisionCircles", rl.CheckCollisionCircles)
@@ -491,7 +565,7 @@ func main() {
 	_ = e.Define("ImageDrawTextEx", rl.ImageDrawTextEx)
 
 
-    	// Texture loading functions
+    // Texture loading functions
 
 	_ = e.Define("LoadTexture", rl.LoadTexture)
 	_ = e.Define("LoadTextureFromImage", rl.LoadTextureFromImage)
@@ -503,14 +577,14 @@ func main() {
 	_ = e.Define("UpdateTextureRec", rl.UpdateTextureRec)
 
 
-    	// Texture configuration functions
+    // Texture configuration functions
 
 	_ = e.Define("GenTextureMipmaps", rl.GenTextureMipmaps)
 	_ = e.Define("SetTextureFilter", rl.SetTextureFilter)
 	_ = e.Define("SetTextureWrap", rl.SetTextureWrap)
 
 
-    	// Texture drawing functions
+    // Texture drawing functions
 
 	_ = e.Define("DrawTexture", rl.DrawTexture)
 	_ = e.Define("DrawTextureV", rl.DrawTextureV)
@@ -523,7 +597,7 @@ func main() {
 	//###_ = e.Define("DrawTexturePoly", rl.DrawTexturePoly)
 
 
-    	// Color/pixel related functions
+    // Color/pixel related functions
 
 
 	_ = e.Define("Fade", rl.Fade)
@@ -566,7 +640,7 @@ func main() {
 	//###_ = e.Define("DrawTextCodepoint", rl.DrawTextCodepoint)
 
 
-    	// Text misc. functions
+    // Text misc. functions
 
 	_ = e.Define("MeasureText", rl.MeasureText)
 	_ = e.Define("MeasureTextEx", rl.MeasureTextEx)
@@ -575,7 +649,7 @@ func main() {
 	_ = e.Define("GetGlyphAtlasRec", rl.GetGlyphAtlasRec)
 
 
-    	// Text codepoints management functions (unicode characters)
+    // Text codepoints management functions (unicode characters)
 
 	//###_ = e.Define("LoadCodepoints", rl.LoadCodepoints)
 	//###_ = e.Define("UnloadCodepoints", rl.UnloadCodepoints)
@@ -585,7 +659,7 @@ func main() {
 	//###_ = e.Define("TextCodepointsToUTF8", rl.TextCodepointsToUTF8)
 
 
-    	// Text strings management functions (no utf8 strings, only byte chars)         
+    // Text strings management functions (no utf8 strings, only byte chars)         
 
 	//###_ = e.Define("TextCopy", rl.TextCopy)
 	//###_ = e.Define("TextIsEqual", rl.TextIsEqual)
@@ -608,7 +682,7 @@ func main() {
 	// MODULE: TEXT \\
 
 
-    	// Basic geometric 3D shapes drawing functions
+    // Basic geometric 3D shapes drawing functions
 
 	_ = e.Define("DrawLine3D", rl.DrawLine3D)
 	_ = e.Define("DrawPoint3D", rl.DrawPoint3D)
@@ -633,7 +707,7 @@ func main() {
 	_ = e.Define("DrawGrid", rl.DrawGrid)
 
 
-    	// Model loading/unloading functions
+    // Model loading/unloading functions
 
 	_ = e.Define("LoadModel", rl.LoadModel)
 	_ = e.Define("LoadModelFromMesh", rl.LoadModelFromMesh)
@@ -654,7 +728,7 @@ func main() {
 	//###_ = e.Define("DrawBillboardPro", rl.DrawBillboardPro)
 
 
-    	// Mesh management functions
+    // Mesh management functions
 
 	//###_ = e.Define("UploadMesh", rl.UploadMesh)
 	//###_ = e.Define("UpdateMeshBuffer", rl.UpdateMeshBuffer)
@@ -691,7 +765,7 @@ func main() {
 	_ = e.Define("SetModelMeshMaterial", rl.SetModelMeshMaterial)
 
 
-    	// Model animations loading/unloading functions
+    // Model animations loading/unloading functions
 
 	//###_ = e.Define("LoadModelAnimations", rl.LoadModelAnimations)
 	//###_ = e.Define("UpdateModelAnimation", rl.UpdateModelAnimation)
@@ -700,7 +774,7 @@ func main() {
 	//###_ = e.Define("IsModelAnimationValid", rl.IsModelAnimationValid)
 
 
-   	// Collision detection functions
+    // Collision detection functions
 
 	_ = e.Define("CheckCollisionSpheres", rl.CheckCollisionSpheres)
 	_ = e.Define("CheckCollisionBoxes", rl.CheckCollisionBoxes)
@@ -717,7 +791,7 @@ func main() {
 	// MODULE: AUDIO \\
 
 
-    	// Audio device management functions
+    // Audio device management functions
 
 	_ = e.Define("InitAudioDevice", rl.InitAudioDevice)
 	_ = e.Define("CloseAudioDevice", rl.CloseAudioDevice)
@@ -725,7 +799,7 @@ func main() {
 	_ = e.Define("SetMasterVolume", rl.SetMasterVolume)
 
 
-    	// Wave/Sound loading/unloading functions
+    // Wave/Sound loading/unloading functions
 
 	_ = e.Define("LoadWave", rl.LoadWave)
 	_ = e.Define("LoadWaveFromMemory", rl.LoadWaveFromMemory)
@@ -738,7 +812,7 @@ func main() {
 	//###_ = e.Define("ExportWaveAsCode", rl.ExportWaveAsCode)
 
 
-    	// Wave/Sound management functions
+    // Wave/Sound management functions
 
 	_ = e.Define("PlaySound", rl.PlaySound)
 	_ = e.Define("StopSound", rl.StopSound)
@@ -757,7 +831,7 @@ func main() {
 	_ = e.Define("UnloadWaveSamples", rl.UnloadWaveSamples)
 
 
-    	// Music management functions
+    // Music management functions
 
 	_ = e.Define("LoadMusicStream", rl.LoadMusicStream)
 	_ = e.Define("LoadMusicStreamFromMemory", rl.LoadMusicStreamFromMemory)
@@ -775,7 +849,7 @@ func main() {
 	_ = e.Define("GetMusicTimePlayed", rl.GetMusicTimePlayed)
 
 
-    	// AudioStream management functions
+    // AudioStream management functions
 
 	//###_ = e.Define("InitAudioStream", rl.InitAudioStream)
 	//###_ = e.Define("CloseAudioStream", rl.CloseAudioStream)
@@ -804,12 +878,15 @@ func main() {
 	_ = e.Define("NewRay", rl.NewRay)
 	_ = e.Define("NewRayCollision", rl.NewRayCollision)
 
+
 	
 	for key, val := range colors { _ = e.Define(key, val) }
+	for key, val := range keys { _ = e.Define(key, val) }
+	// Different texture filters
+	_ = e.Define("FilterPoint", rl.FilterPoint)
+	_ = e.Define("FilterBilinear", rl.FilterBilinear)
 
-	_, err = vm.Execute(e, nil, string(script))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(0)
-	}
+
+	_, err = vm.Execute(e, nil, string(script)) // &vm.Options{true} -- "Debug mode"
+	if err != nil { fmt.Println(err); os.Exit(0)}
 }
