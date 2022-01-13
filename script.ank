@@ -1,17 +1,30 @@
 print("Hello World :)")
-InitWindow(640, 480, "test", 50)
+InitWindow(1000, 1280, "test", 10)
+
+
+rr = websearch("orange")
+if len(rr) < 1 { err("Could not GET search results") }
+
+myFont = LoadFont("font.ttf")
+SetTextureFilter(myFont.Texture, FilterBilinear)
+
+
+srTexts = []interface{}
+srUrls  = []interface{}
+srRecs  = []interface{}
+
+for i = 0; i < len(rr); i++ {
+	srTexts += rr[i].Text
+	srUrls  += rr[i].Url
+}
+
+for i = 0; i < len(srUrls); i++ {
+	srRecs += NewRectangle(8, 30 * i + 8, MeasureText(srTexts[i], 30), 34)
+}
 
 mx = GetMouseX()
 my = GetMouseY()
 
-
-pb = NewRectangle(640 / 2 - 60, 40, 120, 80)
-pbc = RED
-
-shouldShow = false
-
-
-mc = NewRectangle(mx - 1, my - 1, 2, 2)
 
 t = 0.0
 for !WindowShouldClose() {
@@ -23,18 +36,154 @@ for !WindowShouldClose() {
 	mx = GetMouseX()
 	my = GetMouseY()
 	mc = NewRectangle(mx - 1, my - 1, 2, 2)
+	
+	// DrawTextEx(Font,text, V2 pos, fontSize, float spacing, Color tint);  // Draw text using font and additional parameters
 
-	DrawRectangleRec(pb, pbc)
 
-	if CheckCollisionRecs(mc, pb) {
-		if IsMouseButtonDown(0) {
-			shouldShow = true
-		} else {
-			shouldShow = false
+	for i = 0; i < len(srUrls); i++ {                        
+		//DrawRectangleRec(srRecs[i], RED)
+		//DrawText(srTexts[i], srRecs[i].X, srRecs[i].Y, srRecs[i].Height, WHITE)
+		DrawTextEx(myFont, srTexts[i], NewVector2(srRecs[i].X, srRecs[i].Y), srRecs[i].Height, 1, WHITE)
+
+		if IsMouseButtonPressed(0) {
+			if CheckCollisionRecs(mc, srRecs[i]) {
+				print(srUrls[i])
+			}
 		}
+
+
+	}
+
+
+
+
+
+
+
+}
+
+
+//mx = GetMouseX()
+//my = GetMouseY()
+
+
+/*ppad = map[string]int {
+	"X": 10,
+	"Y": 480 / 2 - 60,
+	"W": 8,
+	"H": 120,
+}
+epad = map[string]int {
+	"X": 640 - 18,
+	"Y": 480 / 2 - 60,
+	"W": 8,
+	"H": 120,
+}
+
+ball = map[string]interface {
+	"X": ppad.X + 10,
+	"Y": ppad.Y + ppad.Height / 2 - 3,
+	"xVel": 4,
+	"yVel": rand(10)
+}
+
+walls = map[int]interface {
+	0: NewRectangle(0, 0, 640, 4),
+	1: NewRectangle(0, 476, 640, 4)
+}
+
+print(websearch("test"))
+
+t = 0.0
+for !WindowShouldClose() {
+	t += 0.01
+	BeginDrawing()
+	ClearBackground(BLACK)
+	EndDrawing()
+
+	//mx = GetMouseX()
+	//my = GetMouseY()
+	//mc = NewRectangle(mx - 1, my - 1, 2, 2)
+
+	ballRec = NewRectangle(ball.X, ball.Y , 6, 6)
+	ppadRec = NewRectangle(ppad.X, ppad.Y, ppad.W, ppad.H)
+	epadRec = NewRectangle(epad.X, epad.Y, epad.W, epad.H)
+
+
+	DrawRectangleRec(ppadRec, WHITE)
+	DrawRectangleRec(epadRec, WHITE)
+	DrawRectangleRec(ballRec, WHITE)
+
+	if CheckCollisionRecs(ppadRec, ballRec) {
+		ball.xVel = -ball.xVel
+	} else if CheckCollisionRecs(epadRec, ballRec) {
+		ball.xVel = -ball.xVel
+	}
+
+	
+	
+	if CheckCollisionRecs(walls[0], ballRec) {
+		ball.yVel = -ball.yVel
+	} else if CheckCollisionRecs(walls[1], ballRec) {
+		ball.yVel = -ball.yVel
 	}
 	
-	if shouldShow {
-		DrawText("WORKS!", 10, 10, 20, YELLOW)
+
+	DrawText("test", 10, 10, 20, YELLOW)
+
+	
+	
+	if IsKeyDown(KEY_UP) && ppad.Y > ppad.X {
+		ppad.Y -= 3
+	} else if IsKeyDown(KEY_DOWN) && (ppad.Y + ppad.H) < 480 - ppad.X {
+		ppad.Y += 3
 	}
-}
+
+	ball.X += ball.xVel
+	ball.Y += ball.yVel
+
+	//if CheckCollisionRecs(mc, playButton) {
+	//	if IsMouseButtonDown(0) {
+	//		shouldShow = true
+	//	} else {
+	//		shouldShow = false
+	//	}
+	//}
+
+	//if shouldShow {
+	//	DrawText("WORKS!", 10, 10, 20, YELLOW)
+	//}
+
+
+
+
+
+	
+
+
+	//rect1 = NewRectangle(mxPos, myPos, 100, 50 )
+	//rect2 = NewRectangle(640 - mxPos, 480 - myPos, 100, 50)
+	//colRect = GetCollisionRec(rect1, rect2)
+
+	distance += GetMouseWheelMove() * 10
+
+	for i = 0; i < 30; i++ {
+		p1x = mxPos + distance * cos(t + i)
+		ply = myPos + distance * sin(t + i)
+		DrawCircle(p1x, ply, 5, RED)
+	}
+
+
+	DrawRectangleRec(rect1, RED)
+	DrawRectangleRec(rect2, BLUE)
+	DrawRectangleRec(colRect, GREEN)
+
+	for i = 0; i < colRect.Width / 6; i++ {
+		DrawCircle(colRect.X + i * 6, colRect.Y, 2, WHITE)
+		DrawCircle(colRect.X + i * 6, colRect.Y + colRect.Height, 2, WHITE)
+	}
+	for i = 0; i < colRect.Height / 6; i++ {
+		DrawCircle(colRect.X , colRect.Y + i * 6, 2, WHITE)
+		DrawCircle(colRect.X + colRect.Width, colRect.Y + i * 6, 2, WHITE)
+	} */
+//}
